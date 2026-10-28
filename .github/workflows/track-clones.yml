@@ -15,15 +15,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          token: ${{ secrets.TRAFFIC_TOKEN }}
+          token: ${{ secrets.TRAFFIC_TOKEN || github.token }}
 
       - name: Fetch clone traffic
+        id: fetch-traffic
         env:
-          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN || github.token }}
         run: |
-          gh api repos/${{ github.repository }}/traffic/clones > /tmp/traffic.json
+          if ! gh api "repos/${{ github.repository }}/traffic/clones" > /tmp/traffic.json 2>/dev/null; then
+            echo "Traffic API requires TRAFFIC_TOKEN secret or elevated repo traffic permissions. Skipping gracefully."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Update accumulated data
+        if: steps.fetch-traffic.outputs.skip != 'true'
         run: |
           python3 - <<'PYEOF'
           import json
@@ -74,6 +81,7 @@ jobs:
           PYEOF
 
       - name: Commit and push
+        if: steps.fetch-traffic.outputs.skip != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
