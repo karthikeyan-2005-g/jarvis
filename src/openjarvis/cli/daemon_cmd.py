@@ -237,7 +237,11 @@ def start(
     bind_port = port if port is not None else config.server.port
 
     # Build command to run jarvis serve
-    cmd = [sys.executable, "-m", "openjarvis.cli", "serve"]
+    py_dir = os.path.dirname(sys.executable)
+    py_exe = os.path.join(py_dir, "python.exe" if os.name == "nt" else "python")
+    if not os.path.exists(py_exe):
+        py_exe = sys.executable
+    cmd = [py_exe, "-m", "openjarvis.cli", "serve"]
     if host:
         cmd.extend(["--host", host])
     if port is not None:
