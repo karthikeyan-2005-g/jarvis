@@ -109,19 +109,28 @@ class VoiceSession:
         self._tts_backend = None
 
 
-def read_voice_input(console: Any, session: VoiceSession) -> Optional[str] | object:
-    """Accept a typed command/message, or record after an empty submission."""
-    try:
-        typed = input("You> [type, or press Enter to speak] ")
-    except (EOFError, KeyboardInterrupt):
-        return VOICE_EXIT
-    typed = typed.strip()
-    return typed if typed else record_voice(console, session)
+def read_voice_input(
+    console: Any,
+    session: VoiceSession,
+    push_to_talk: bool = False,
+) -> Optional[str] | object:
+    """Accept a typed command/message, or record directly if hands-free."""
+    if push_to_talk:
+        try:
+            typed = input("You> [type, or press Enter to speak] ")
+        except (EOFError, KeyboardInterrupt):
+            return VOICE_EXIT
+        typed = typed.strip()
+        return typed if typed else record_voice(console, session)
+
+    # Hands-free mode: listen directly without requiring Enter key
+    return record_voice(console, session, quiet_when_silent=True)
 
 
 def record_voice(
     console: Any,
     session: VoiceSession | None = None,
+    quiet_when_silent: bool = False,
 ) -> Optional[str] | object:
     """Record from mic, transcribe, and return text or a loop sentinel."""
     from openjarvis.speech.voice_io import record_until_silence
@@ -137,27 +146,32 @@ def record_voice(
         )
         return VOICE_EXIT
 
-    console.print("[dim cyan]Listening… (speak now, stops on silence)[/dim cyan]")
+    if not quiet_when_silent:
+        console.print("[dim cyan]Listening… (speak now, stops on silence)[/dim cyan]")
+    else:
+        console.print("[dim cyan]Listening…[/dim cyan]", end="\r")
     try:
         audio_bytes = record_until_silence()
     except KeyboardInterrupt:
         return VOICE_EXIT
     except Exception as exc:
-        # PortAudio failures are regular Exceptions (and can surface as
-        # OSError), so report them without letting terminal control sequences
-        # through. SystemExit deliberately continues to propagate, while
-        # Ctrl-C maps to the chat loop's graceful-exit sentinel above.
         console.print(f"[red]Mic error: {_terminal_safe_text(exc)}[/red]")
         return VOICE_EXIT
 
-    console.print("[dim]Transcribing…[/dim]")
+    if not audio_bytes:
+        return None
+
+    console.print("\n[dim]Transcribing…[/dim]")
     try:
         result = backend.transcribe(audio_bytes, format="wav")
         text = result.text.strip()
         if text:
+            if text.lower() in ("exit", "quit", "goodbye", "bye", "jarvis exit", "jarvis quit", "stop"):
+                return VOICE_EXIT
             console.print(f"[bold]You (voice):[/bold] {_terminal_safe_text(text)}")
             return text
-        console.print("[dim]Nothing heard — try again.[/dim]")
+        if not quiet_when_silent:
+            console.print("[dim]Nothing heard — try again.[/dim]")
         return None
     except Exception as exc:
         console.print(f"[red]Transcription error: {_terminal_safe_text(exc)}[/red]")

@@ -78,6 +78,14 @@ def _read_input(prompt: str = "You> ") -> Optional[str]:
     default=False,
     help="Enable voice I/O: mic input with silence detection + TTS response playback.",
 )
+@click.option(
+    "--ptt",
+    "--push-to-talk",
+    "push_to_talk",
+    is_flag=True,
+    default=False,
+    help="Press Enter before speaking (Push-to-Talk) instead of hands-free continuous listening.",
+)
 @runtime_cli_options
 def chat(
     engine_key: str | None,
@@ -88,6 +96,7 @@ def chat(
     system_prompt: str | None,
     persona_name: str | None,
     voice_mode: bool,
+    push_to_talk: bool,
     num_ctx: int | None,
     num_gpu: int | None,
     skip_runtime_panel: bool,
@@ -365,7 +374,7 @@ def chat(
 
         if voice_mode:
             assert voice_session is not None
-            result = read_voice_input(console, voice_session)
+            result = read_voice_input(console, voice_session, push_to_talk=push_to_talk)
             if result is VOICE_EXIT:
                 console.print("\n[dim]Goodbye![/dim]")
                 break

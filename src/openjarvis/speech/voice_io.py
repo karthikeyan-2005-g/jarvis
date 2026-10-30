@@ -9,8 +9,8 @@ _SAMPLE_RATE = 16000
 _CHANNELS = 1
 _CHUNK = 1024
 _SILENCE_THRESHOLD = 500  # RMS below this → silence
-_SILENCE_SECONDS = 1.5  # seconds of silence before auto-stop
-_STARTUP_SILENCE_SECONDS = 5.0  # give up early if speech never begins
+_SILENCE_SECONDS = 1.1  # seconds of silence before auto-stop
+_STARTUP_SILENCE_SECONDS = 3.5  # give up early if speech never begins
 _MAX_RECORD_SECONDS = 30  # safety ceiling
 
 
@@ -77,7 +77,7 @@ def record_until_silence(
                 if silence_count >= silence_chunks:
                     break
 
-    return _frames_to_wav(frames, sample_rate)
+    return _frames_to_wav(frames, sample_rate) if has_speech else b""
 
 
 def _frames_to_wav(frames: list[bytes], sample_rate: int) -> bytes:
