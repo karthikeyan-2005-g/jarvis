@@ -426,6 +426,27 @@ def chat(
                     console.print(f"[bold]{role}:[/bold] {msg.content[:200]}")
             continue
 
+        # Check Iron Man native Windows system commands (open chrome, apps, websites, etc.)
+        from openjarvis.core.system_control import handle_system_command
+
+        sys_resp = handle_system_command(user_input)
+        if sys_resp:
+            history.append(Message(role=Role.USER, content=user_input))
+            history.append(Message(role=Role.ASSISTANT, content=sys_resp))
+            console.print()
+            console.print(Markdown(sys_resp))
+            console.print()
+            if voice_mode:
+                assert voice_session is not None
+                speak(sys_resp, console, voice_session)
+            publish_completed_exchange(
+                bus,
+                user_input,
+                sys_resp,
+                source="cli.chat",
+            )
+            continue
+
         # Add user message
         history.append(Message(role=Role.USER, content=user_input))
 

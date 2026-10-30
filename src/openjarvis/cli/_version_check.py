@@ -75,8 +75,11 @@ def _config_disabled() -> bool:
     tried to express an opt-out and the file has a typo, we should not
     silently flip back to auto-checking against their intent.
     """
-    path = _config_path()
-    if not path.exists():
+    try:
+        path = _config_path()
+        if not path.exists():
+            return False
+    except OSError:
         return False
     try:
         import tomllib

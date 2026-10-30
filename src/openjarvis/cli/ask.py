@@ -823,6 +823,18 @@ def ask(
     console = Console(stderr=True)
     query_text = " ".join(query)
 
+    # Fast path: Iron Man Windows system commands
+    from openjarvis.core.system_control import handle_system_command
+
+    sys_resp = handle_system_command(query_text)
+    if sys_resp:
+        if output_json:
+            import json
+            print(json.dumps({"response": sys_resp, "system_action": True}))
+        else:
+            Console().print(sys_resp)
+        return
+
     # Vision: collect base64 images from --image files and/or --screen.
     image_b64: list[str] = []
     for _img_path in image_paths:

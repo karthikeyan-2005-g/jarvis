@@ -133,4 +133,4 @@ minion_logs/
 oj-debug.*.json
 
 # Nested clone directory
-OpenJarvis/
+/OpenJarvis/
